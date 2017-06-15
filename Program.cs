@@ -8,33 +8,36 @@ namespace Huffman
     {
         static void Main(string[] args)
         {
-            string inputFileName = null;
-            string outputFileName = null;
-            bool decoding = false;
-            foreach (var par in args)
-            {
-                if (null == inputFileName && null == outputFileName)
-                {
-                    if (par.ToLowerInvariant().Equals("-d"))
-                        decoding = true;
-                    else
-                        inputFileName = par;
-                }
-                else
-                if (null == outputFileName)
-                {
-                    outputFileName = par;
-                }
-                else
-                    break; // mamy wszystkie parametry                
-            }
-            if (!string.IsNullOrEmpty(inputFileName) && !string.IsNullOrEmpty(outputFileName) && File.Exists(inputFileName))
-                if (decoding)
-                { }
-                  
-            else
-                Compressor.Compress(inputFileName, outputFileName);
-            
+            //string inputFileName = null;
+            //string outputFileName = null;
+            //bool decoding = false;
+            //foreach (var par in args)
+            //{
+            //    if (null == inputFileName && null == outputFileName)
+            //    {
+            //        if (par.ToLowerInvariant().Equals("-d"))
+            //            decoding = true;
+            //        else
+            //            inputFileName = par;
+            //    }
+            //    else
+            //    if (null == outputFileName)
+            //    {
+            //        outputFileName = par;
+            //    }
+            //    else
+            //        break; // mamy wszystkie parametry                
+            //}
+            //if (!string.IsNullOrEmpty(inputFileName) && !string.IsNullOrEmpty(outputFileName) && File.Exists(inputFileName))
+            //    if (decoding)
+            //        Codec.Decode(inputFileName, outputFileName);
+            //    else
+            //        Codec.Encode(inputFileName, outputFileName);
+
+            Codec.Encode(@"C:\Downloads\test.match", "test.compressed");
+            Codec.Decode("test.compressed", "test.uncompressed");
+
+
         }
     }
 }

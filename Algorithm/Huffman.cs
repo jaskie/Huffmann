@@ -49,12 +49,10 @@ namespace Huffman.Algorithm
             var sorted_nodes = nodes.Where(n => n.Frequency > 0).OrderBy(n => n.Frequency).ToList();
             while (sorted_nodes.Count > 1)
             {
-                var left = sorted_nodes[0];
-                var right = sorted_nodes[1];
+                var left = sorted_nodes[1];
+                var right = sorted_nodes[0];
                 sorted_nodes.RemoveRange(0, 2);
                 var newNode = new Node(left, right);
-                left.Parent = newNode;
-                right.Parent = newNode;
                 var next_node = sorted_nodes.FirstOrDefault(n => n.Frequency > newNode.Frequency);
                 if (next_node == null)
                     sorted_nodes.Add(newNode);

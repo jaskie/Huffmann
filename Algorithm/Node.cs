@@ -29,6 +29,8 @@ namespace Huffman.Algorithm
         {
             Left = left;
             Right = right;
+            left.Parent = this;
+            right.Parent = this;
             _frequency = left.Frequency + right.Frequency;
         }
 

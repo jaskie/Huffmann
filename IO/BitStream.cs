@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace Huffman.IO
 {
     public class BitStream: IDisposable
     {
         private readonly Stream _stream;
-        private int _bitIxToWrite; // bit index to write to
-        private int _bitIxToRead; // bit index to read from
-        private byte _byteToWrite; // byte to write being composed
-        private byte _byteToRead;
+        private int _bitIndex; // bit index to write to
+        private byte _currentByte; // byte to write being composed
 
         public BitStream(Stream stream)
         {
@@ -21,18 +17,18 @@ namespace Huffman.IO
         public void Write(bool bit)
         {
             if (bit)
-                _byteToWrite |= (byte)(1 << _bitIxToWrite);
-            if (++_bitIxToWrite > 7)
+                _currentByte |= (byte)(1 << _bitIndex);
+            if (++_bitIndex > 7)
             {
-                _stream.WriteByte(_byteToWrite);
-                _bitIxToWrite = 0;
-                _byteToWrite = 0;
+                _stream.WriteByte(_currentByte);
+                _bitIndex = 0;
+                _currentByte = 0;
             }
         }
 
         public void Write(long value)
         {
-            if (0 == _bitIxToWrite)
+            if (_bitIndex == 0)
                 _stream.Write(BitConverter.GetBytes(value), 0, sizeof(long));
             else
             {
@@ -44,7 +40,7 @@ namespace Huffman.IO
 
         public void Write(byte value)
         {
-            if (0 == _bitIxToWrite)
+            if (_bitIndex == 0)
                 _stream.WriteByte(value);
             else
             {
@@ -54,8 +50,63 @@ namespace Huffman.IO
             }
         }
 
-        public bool ReadBit()
+        public bool Read(out bool result)
         {
+            if (_bitIndex == 0)
+            {
+                var i = _stream.ReadByte();
+                if (-1 == i)  //EOF
+                {
+                    result = false;
+                    return false;
+                }
+                else
+                    _currentByte = (byte)i;
+            }
+            result = (_currentByte & (1 << _bitIndex)) > 0;
+            if (++_bitIndex > 7)
+                _bitIndex = 0;
+            return true;
+        }
+
+        public bool Read(out byte result)
+        {
+            result = 0;
+            if (_bitIndex == 0)
+            {
+                int i = _stream.ReadByte();
+                if (-1 == i) //EOF
+                    return false;
+                result = (byte)i;
+                return true;
+            }
+            var size = sizeof(byte) * 8;
+            for (var i = 0; i < size; i++)
+            {
+                if (Read(out bool bit) && bit)
+                    result |= (byte)(1 << i);
+            }
+            return true;
+        }
+
+        public bool Read(out long result)
+        {
+            result = 0;
+            if (_bitIndex == 0)
+            {
+                byte[] buffer = new byte[sizeof(long)];
+                int nread = _stream.Read(buffer, 0, sizeof(long));
+                if (sizeof(long) > nread)
+                    return false; // EOF
+                result = BitConverter.ToInt64(buffer, 0);
+                return true;
+            }
+            var size = sizeof(byte) * 8;
+            for (var i = 0; i < size; i++)
+            {
+                if (Read(out bool bit) && bit)
+                    result |= (byte)(1 << i);
+            }
             return true;
         }
 
@@ -65,9 +116,9 @@ namespace Huffman.IO
             if (!_isDisposed)
             {
                 _isDisposed = true;
-                if (_bitIxToWrite > 0)
-                    _stream.WriteByte(_byteToWrite);
-                _stream.Flush();
+                if (_bitIndex > 0 && _stream.CanWrite)
+                    _stream.WriteByte(_currentByte);
+                _stream.Dispose();
             }
         }
 
