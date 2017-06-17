@@ -6,7 +6,7 @@ using System.Text;
 namespace Huffman.Algorithm
 {
     [DebuggerDisplay("{_key}:{_frequency}")]
-    class Node
+    public class Node
     {
         private readonly byte? _key;
         private int _frequency;

@@ -3,17 +3,24 @@ using System.IO;
 
 namespace Huffman.IO
 {
+    /// <summary>
+    /// Klasa zapisywania i odczytywania bitowego strumienia danych
+    /// </summary>
     public class BitStream: IDisposable
     {
-        private readonly Stream _stream;
-        private int _bitIndex; // bit index to write to
-        private byte _currentByte; // byte to write being composed
+        private readonly Stream _stream; // strumień, na którym są przeprowadzane operacje odczytu albo zapisu
+        private int _bitIndex; // aktualny numer bitu
+        private byte _currentByte; // aktualny bajt, który jest odczytywany lub będzie zapisany
+        private bool _isDisposed = false; // na wypadek powtórzenia wywołania Dispose
 
         public BitStream(Stream stream)
         {
             _stream = stream;
         }
 
+        /// <summary>
+        /// zapis pojedynczego bitu
+        /// </summary>
         public void Write(bool bit)
         {
             if (bit)
@@ -26,18 +33,9 @@ namespace Huffman.IO
             }
         }
 
-        public void Write(long value)
-        {
-            if (_bitIndex == 0)
-                _stream.Write(BitConverter.GetBytes(value), 0, sizeof(long));
-            else
-            {
-                var size = sizeof(long) * 8;
-                for (var i = 0; i < size; i++)
-                    Write(((value >>= 1) & 1) != 0);
-            }
-        }
-
+        /// <summary>
+        /// Zapis bajtu, jeśli zerowy indeks bitu, to bezpośrednio do strumienia
+        /// </summary>
         public void Write(byte value)
         {
             if (_bitIndex == 0)
@@ -46,16 +44,36 @@ namespace Huffman.IO
             {
                 var size = sizeof(byte) * 8;
                 for (var i = 0; i < size; i++)
-                    Write(((value >>= 1) & 1) != 0);
+                    Write((value & (1 << i)) != 0);
             }
         }
 
+        /// <summary>
+        /// Zapis Int64, jeśli zerowy indeks bitu, to bezpośrednio do strumienia
+        /// </summary>
+        public void Write(long value)
+        {
+            if (_bitIndex == 0)
+                _stream.Write(BitConverter.GetBytes(value), 0, sizeof(long));
+            else
+            {
+                var size = sizeof(long) * 8;
+                for (var i = 0; i < size; i++)
+                    Write((value & (1L << i)) != 0);
+            }
+        }
+
+        /// <summary>
+        /// odczyt pojedynczego bitu
+        /// </summary>
+        /// <param name="result">odczytany bit</param>
+        /// <returns>false, jeśli koniec pliku</returns>
         public bool Read(out bool result)
         {
             if (_bitIndex == 0)
             {
                 var i = _stream.ReadByte();
-                if (-1 == i)  //EOF
+                if (i == -1)  //EOF
                 {
                     result = false;
                     return false;
@@ -69,13 +87,18 @@ namespace Huffman.IO
             return true;
         }
 
+        /// <summary>
+        /// odczyt bajtu
+        /// </summary>
+        /// <param name="result">odczytany bit</param>
+        /// <returns>false, jeśli koniec pliku</returns>
         public bool Read(out byte result)
         {
             result = 0;
             if (_bitIndex == 0)
             {
                 int i = _stream.ReadByte();
-                if (-1 == i) //EOF
+                if (i == -1) //EOF
                     return false;
                 result = (byte)i;
                 return true;
@@ -83,12 +106,21 @@ namespace Huffman.IO
             var size = sizeof(byte) * 8;
             for (var i = 0; i < size; i++)
             {
-                if (Read(out bool bit) && bit)
-                    result |= (byte)(1 << i);
+                if (Read(out bool bit))
+                {
+                    if (bit)
+                        result |= (byte)(1 << i);
+                }
+                else return false;
             }
             return true;
         }
 
+        /// <summary>
+        /// odczyt Int64
+        /// </summary>
+        /// <param name="result">odczytany bit</param>
+        /// <returns>false, jeśli koniec pliku</returns>
         public bool Read(out long result)
         {
             result = 0;
@@ -104,13 +136,16 @@ namespace Huffman.IO
             var size = sizeof(byte) * 8;
             for (var i = 0; i < size; i++)
             {
-                if (Read(out bool bit) && bit)
-                    result |= (byte)(1 << i);
+                if (Read(out bool bit))
+                {
+                    if (bit)
+                        result |= (byte)(1 << i);
+                }
+                else return false;
             }
             return true;
         }
 
-        private bool _isDisposed = false; // To detect redundant calls
         public void Dispose()
         {
             if (!_isDisposed)
